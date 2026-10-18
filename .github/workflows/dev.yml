@@ -1,0 +1,36 @@
+name: dev
+
+# Caller workflow for the dev environment.
+# Pull request -> scan + plan (posted as a comment). Merge to main -> scan + plan + apply.
+
+on:
+  pull_request:
+    paths:
+      - "envs/dev/**"
+      - "modules/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "envs/dev/**"
+      - "modules/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  scan:
+    uses: ./.github/workflows/reusable-iac-scan.yml
+    with:
+      directory: .
+
+  terraform:
+    needs: scan
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      working-directory: envs/dev
+      environment: dev
+      apply: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
